@@ -8,7 +8,7 @@ from meta_learn.models import NeuralNetwork
 from meta_learn.abstract import RegressionModelMetaLearned
 from meta_learn.util import DummyLRScheduler, _handle_input_dimensionality
 
-from config import device
+from meta_learn.config import device
 
 
 class MAMLRegression(RegressionModelMetaLearned):

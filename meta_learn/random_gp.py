@@ -15,7 +15,7 @@ from meta_learn.models import (
     CatDist,
     NeuralNetworkVectorized,
 )
-from config import device
+from meta_learn.config import device
 
 
 def _filter(dict, str):

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from meta_learn.util import get_logger, _handle_input_dimensionality
-from config import device
+from meta_learn.config import device
 
 
 class RegressionModel:

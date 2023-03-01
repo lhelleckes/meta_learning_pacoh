@@ -9,7 +9,7 @@ from meta_learn.models import AffineTransformedDistribution, EqualWeightedMixtur
 from meta_learn.random_gp import RandomGPMeta, RandomGPPosterior
 from meta_learn.util import _handle_input_dimensionality, DummyLRScheduler
 from meta_learn.abstract import RegressionModelMetaLearned
-from config import device
+from meta_learn.config import device
 
 
 class GPRegressionMetaLearnedVI(RegressionModelMetaLearned):

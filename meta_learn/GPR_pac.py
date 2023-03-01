@@ -9,7 +9,7 @@ from meta_learn.models import (
     AffineTransformedDistribution,
 )
 from meta_learn.abstract import RegressionModel
-from config import device
+from meta_learn.config import device
 
 
 class GPRegressionLearnedPAC(RegressionModel):

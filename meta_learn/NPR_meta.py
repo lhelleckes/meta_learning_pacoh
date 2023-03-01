@@ -13,7 +13,7 @@ from third_party.neural_processes.neural_process import NeuralProcess
 from meta_learn.models import AffineTransformedDistribution
 from meta_learn.util import _handle_input_dimensionality, DummyLRScheduler
 from meta_learn.abstract import RegressionModelMetaLearned
-from config import device
+from meta_learn.config import device
 
 
 class NPRegressionMetaLearned(RegressionModelMetaLearned):
