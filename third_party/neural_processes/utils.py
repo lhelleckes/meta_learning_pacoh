@@ -24,9 +24,9 @@ def context_target_split(x, y, num_context, num_extra_target):
     """
     num_points = x.shape[1]
     # Sample locations of context and target points
-    locations = np.random.choice(num_points,
-                                 size=num_context + num_extra_target,
-                                 replace=False)
+    locations = np.random.choice(
+        num_points, size=num_context + num_extra_target, replace=False
+    )
     x_context = x[:, locations[:num_context], :]
     y_context = y[:, locations[:num_context], :]
     x_target = x[:, locations, :]
@@ -105,9 +105,9 @@ def random_context_target_mask(img_size, num_context, num_extra_target):
     # Sample integers without replacement between 0 and the total number of
     # pixels. The measurements array will then contain pixel indices
     # corresponding to locations where pixels will be visible.
-    measurements = np.random.choice(range(height * width),
-                                    size=num_context + num_extra_target,
-                                    replace=False)
+    measurements = np.random.choice(
+        range(height * width), size=num_context + num_extra_target, replace=False
+    )
     # Create empty masks
     context_mask = torch.zeros(width, height).byte()
     target_mask = torch.zeros(width, height).byte()
@@ -121,8 +121,9 @@ def random_context_target_mask(img_size, num_context, num_extra_target):
     return context_mask, target_mask
 
 
-def batch_context_target_mask(img_size, num_context, num_extra_target,
-                              batch_size, repeat=False):
+def batch_context_target_mask(
+    img_size, num_context, num_extra_target, batch_size, repeat=False
+):
     """Returns bacth of context and target masks, where the visible pixels in
     the context mask are a subset of those in the target mask.
 
@@ -143,17 +144,17 @@ def batch_context_target_mask(img_size, num_context, num_extra_target,
     context_mask_batch = torch.zeros(batch_size, *img_size[1:]).byte()
     target_mask_batch = torch.zeros(batch_size, *img_size[1:]).byte()
     if repeat:
-        context_mask, target_mask = random_context_target_mask(img_size,
-                                                               num_context,
-                                                               num_extra_target)
+        context_mask, target_mask = random_context_target_mask(
+            img_size, num_context, num_extra_target
+        )
         for i in range(batch_size):
             context_mask_batch[i] = context_mask
             target_mask_batch[i] = target_mask
     else:
         for i in range(batch_size):
-            context_mask, target_mask = random_context_target_mask(img_size,
-                                                                   num_context,
-                                                                   num_extra_target)
+            context_mask, target_mask = random_context_target_mask(
+                img_size, num_context, num_extra_target
+            )
             context_mask_batch[i] = context_mask
             target_mask_batch[i] = target_mask
     return context_mask_batch, target_mask_batch
@@ -206,7 +207,7 @@ def inpaint(model, img, context_mask, device):
     context_mask : torch.Tensor
         Binary tensor where 1 corresponds to a visible pixel and 0 to an
         occluded pixel. Shape (height, width). Must have dtype=torch.uint8
-        or similar. 
+        or similar.
 
     device : torch.device
     """

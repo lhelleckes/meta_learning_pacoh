@@ -12,7 +12,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Get config file from command line arguments
 if len(sys.argv) != 2:
-    raise(RuntimeError("Wrong arguments, use python main_experiment.py <path_to_config>"))
+    raise (
+        RuntimeError("Wrong arguments, use python main_experiment.py <path_to_config>")
+    )
 config_path = sys.argv[1]
 
 # Create a folder to store experiment results
@@ -26,7 +28,7 @@ with open(config_path) as config_file:
     config = json.load(config_file)
 
 # Save config file in experiment directory
-with open(directory + '/config.json', 'w') as config_file:
+with open(directory + "/config.json", "w") as config_file:
     json.dump(config, config_file)
 
 img_size = config["img_size"]
@@ -47,15 +49,15 @@ np_img = NeuralProcessImg(img_size, r_dim, z_dim, h_dim).to(device)
 
 optimizer = torch.optim.Adam(np_img.parameters(), lr=config["lr"])
 
-np_trainer = NeuralProcessTrainer(device, np_img, optimizer,
-                                  num_context_range, num_extra_target_range,
-                                  print_freq=100)
+np_trainer = NeuralProcessTrainer(
+    device, np_img, optimizer, num_context_range, num_extra_target_range, print_freq=100
+)
 
 for epoch in range(epochs):
     print("Epoch {}".format(epoch + 1))
     np_trainer.train(data_loader, 1)
     # Save losses at every epoch
-    with open(directory + '/losses.json', 'w') as f:
+    with open(directory + "/losses.json", "w") as f:
         json.dump(np_trainer.epoch_loss_history, f)
     # Save model at every epoch
-    torch.save(np_trainer.neural_process.state_dict(), directory + '/model.pt')
+    torch.save(np_trainer.neural_process.state_dict(), directory + "/model.pt")

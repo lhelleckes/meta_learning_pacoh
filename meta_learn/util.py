@@ -23,7 +23,7 @@ def find_root_by_bounding(fun, left, right, eps=1e-6, max_iter=1e4):
     n_iter = 0
     approx_error = 1e12
     while approx_error > eps:
-        middle = (right + left)/2
+        middle = (right + left) / 2
         f = fun(middle)
 
         left_of_zero = (f < 0).flatten()
@@ -32,14 +32,17 @@ def find_root_by_bounding(fun, left, right, eps=1e-6, max_iter=1e4):
 
         assert torch.all(left <= right).item()
 
-        approx_error = torch.max(torch.abs(right-left))/2
+        approx_error = torch.max(torch.abs(right - left)) / 2
         n_iter += 1
 
         if n_iter > max_iter:
-            warnings.warn("Max_iter has been reached - stopping newton method for determining quantiles")
-            return torch.Tensor([np.nan for _ in range(len(left))] )
+            warnings.warn(
+                "Max_iter has been reached - stopping newton method for determining quantiles"
+            )
+            return torch.Tensor([np.nan for _ in range(len(left))])
 
     return middle
+
 
 def _handle_input_dimensionality(x, y=None):
     if x.ndim == 1:
@@ -57,20 +60,21 @@ def _handle_input_dimensionality(x, y=None):
     else:
         return x
 
-def get_logger(log_dir=None, log_file='output.log', expname=''):
 
-    if log_dir is None and flags.FLAGS.is_parsed() and hasattr(flags.FLAGS, 'log_dir'):
+def get_logger(log_dir=None, log_file="output.log", expname=""):
+    if log_dir is None and flags.FLAGS.is_parsed() and hasattr(flags.FLAGS, "log_dir"):
         log_dir = flags.FLAGS.log_dir
 
-    logger = logging.getLogger('gp-priors')
+    logger = logging.getLogger("gp-priors")
     logger.setLevel(logging.INFO)
 
     if len(logger.handlers) == 0:
-
-        #formatting
+        # formatting
         if len(expname) > 0:
-            expname = ' %s - '%expname
-        formatter = logging.Formatter('[%(asctime)s -' + '%s'%expname +  '%(levelname)s]  %(message)s')
+            expname = " %s - " % expname
+        formatter = logging.Formatter(
+            "[%(asctime)s -" + "%s" % expname + "%(levelname)s]  %(message)s"
+        )
 
         # Stream Handler
         sh = logging.StreamHandler()
@@ -91,8 +95,8 @@ def get_logger(log_dir=None, log_file='output.log', expname=''):
             logger.log_dir = None
     return logger
 
-class DummyLRScheduler:
 
+class DummyLRScheduler:
     def __init__(self, *args, **kwargs):
         pass
 
@@ -106,8 +110,8 @@ from multiprocessing import Process
 import multiprocessing
 import numpy as np
 
-class AsyncExecutor:
 
+class AsyncExecutor:
     def __init__(self, n_jobs=1):
         self.num_workers = n_jobs if n_jobs > 0 else multiprocessing.cpu_count()
         self._pool = []
@@ -124,7 +128,7 @@ class AsyncExecutor:
                     self._pool[i].terminate()
                     if len(tasks) > 0:
                         if verbose:
-                          print('task %i of %i'%(n_tasks-len(tasks), n_tasks))
+                            print("task %i of %i" % (n_tasks - len(tasks), n_tasks))
                         next_task = tasks.pop(0)
                         self._pool[i] = _start_process(target, next_task)
                     else:
@@ -133,17 +137,17 @@ class AsyncExecutor:
     def _populate_pool(self):
         self._pool = [_start_process(_dummy_fun) for _ in range(self.num_workers)]
 
-class LoopExecutor:
 
+class LoopExecutor:
     def run(self, target, *args_iter, verbose=False):
         tasks = list(zip(*args_iter))
         n_tasks = len(tasks)
 
-
         for i, task in enumerate(tasks):
             target(*task)
             if verbose:
-                print('task %i of %i'%(n_tasks-len(tasks), n_tasks))
+                print("task %i of %i" % (n_tasks - len(tasks), n_tasks))
+
 
 def _start_process(target, args=None):
     if args:
@@ -152,6 +156,7 @@ def _start_process(target, args=None):
         p = Process(target=target)
     p.start()
     return p
+
 
 def _dummy_fun():
     pass

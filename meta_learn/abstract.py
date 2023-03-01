@@ -5,7 +5,6 @@ from config import device
 
 
 class RegressionModel:
-
     def __init__(self, normalize_data=True, random_seed=None):
         self.normalize_data = normalize_data
         self.logger = get_logger()
@@ -17,7 +16,7 @@ class RegressionModel:
 
         if random_seed is not None:
             torch.manual_seed(random_seed)
-            np.random.seed(random_seed+1)
+            np.random.seed(random_seed + 1)
 
     def predict(self, test_x, return_density=False, **kwargs):
         raise NotImplementedError
@@ -35,17 +34,25 @@ class RegressionModel:
         """
         # convert to tensors
         test_x, test_t = _handle_input_dimensionality(test_x, test_t)
-        test_t_tensor = torch.from_numpy(test_t).contiguous().float().flatten().to(device)
+        test_t_tensor = (
+            torch.from_numpy(test_t).contiguous().float().flatten().to(device)
+        )
 
         with torch.no_grad():
             pred_dist = self.predict(test_x, return_density=True, *kwargs)
-            avg_log_likelihood = pred_dist.log_prob(test_t_tensor) / test_t_tensor.shape[0]
+            avg_log_likelihood = (
+                pred_dist.log_prob(test_t_tensor) / test_t_tensor.shape[0]
+            )
             rmse = torch.mean(torch.pow(pred_dist.mean - test_t_tensor, 2)).sqrt()
 
             pred_dist_vect = self._vectorize_pred_dist(pred_dist)
             calibr_error = self._calib_error(pred_dist_vect, test_t_tensor)
 
-            return avg_log_likelihood.cpu().item(), rmse.cpu().item(), calibr_error.cpu().item()
+            return (
+                avg_log_likelihood.cpu().item(),
+                rmse.cpu().item(),
+                calibr_error.cpu().item(),
+            )
 
     def confidence_intervals(self, test_x, confidence=0.9, **kwargs):
         pred_dist = self.predict(test_x, return_density=True, **kwargs)
@@ -69,8 +76,12 @@ class RegressionModel:
             self.x_std, self.y_std = np.ones(X.shape[1]), np.ones(Y.shape[1])
 
     def _normalize_data(self, X, Y=None):
-        assert hasattr(self, "x_mean") and hasattr(self, "x_std"), "requires computing normalization stats beforehand"
-        assert hasattr(self, "y_mean") and hasattr(self, "y_std"), "requires computing normalization stats beforehand"
+        assert hasattr(self, "x_mean") and hasattr(
+            self, "x_std"
+        ), "requires computing normalization stats beforehand"
+        assert hasattr(self, "y_mean") and hasattr(
+            self, "y_std"
+        ), "requires computing normalization stats beforehand"
 
         X_normalized = (X - self.x_mean[None, :]) / self.x_std[None, :]
 
@@ -81,17 +92,33 @@ class RegressionModel:
             return X_normalized, Y_normalized
 
     def _unnormalize_pred(self, pred_mean, pred_std):
-        assert hasattr(self, "x_mean") and hasattr(self, "x_std"), "requires computing normalization stats beforehand"
-        assert hasattr(self, "y_mean") and hasattr(self, "y_std"), "requires computing normalization stats beforehand"
+        assert hasattr(self, "x_mean") and hasattr(
+            self, "x_std"
+        ), "requires computing normalization stats beforehand"
+        assert hasattr(self, "y_mean") and hasattr(
+            self, "y_std"
+        ), "requires computing normalization stats beforehand"
 
         if self.normalize_data:
-            assert pred_mean.ndim == pred_std.ndim == 2 and pred_mean.shape[1] == pred_std.shape[1] == self.output_dim
-            if isinstance(pred_mean, torch.Tensor) and isinstance(pred_std, torch.Tensor):
-                y_mean_tensor, y_std_tensor = torch.tensor(self.y_mean).float(), torch.tensor(self.y_std).float()
-                pred_mean = pred_mean.mul(y_std_tensor[None, :]) + y_mean_tensor[None, :]
+            assert (
+                pred_mean.ndim == pred_std.ndim == 2
+                and pred_mean.shape[1] == pred_std.shape[1] == self.output_dim
+            )
+            if isinstance(pred_mean, torch.Tensor) and isinstance(
+                pred_std, torch.Tensor
+            ):
+                y_mean_tensor, y_std_tensor = (
+                    torch.tensor(self.y_mean).float(),
+                    torch.tensor(self.y_std).float(),
+                )
+                pred_mean = (
+                    pred_mean.mul(y_std_tensor[None, :]) + y_mean_tensor[None, :]
+                )
                 pred_std = pred_std.mul(y_std_tensor[None, :])
             else:
-                pred_mean = pred_mean.multiply(self.y_std[None, :]) + self.y_mean[None, :]
+                pred_mean = (
+                    pred_mean.multiply(self.y_std[None, :]) + self.y_mean[None, :]
+                )
                 pred_std = pred_std.multiply(self.y_std[None, :])
 
         return pred_mean, pred_std
@@ -106,13 +133,18 @@ class RegressionModel:
         train_x_normalized, train_t_normalized = self._normalize_data(train_x, train_t)
 
         # c) Convert the data into pytorch tensors
-        self.train_x = torch.from_numpy(train_x_normalized).contiguous().float().to(device)
-        self.train_t = torch.from_numpy(train_t_normalized).contiguous().float().to(device)
+        self.train_x = (
+            torch.from_numpy(train_x_normalized).contiguous().float().to(device)
+        )
+        self.train_t = (
+            torch.from_numpy(train_t_normalized).contiguous().float().to(device)
+        )
 
         return self.train_x, self.train_t
 
     def _vectorize_pred_dist(self, pred_dist):
         raise NotImplementedError
+
 
 class RegressionModelMetaLearned:
     def __init__(self, normalize_data=True, random_seed=None, one_hot_idx=None):

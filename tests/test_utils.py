@@ -1,20 +1,26 @@
 import unittest
-from meta_learn.models import NeuralNetworkVectorized, NeuralNetwork, LinearVectorized, CatDist, EqualWeightedMixtureDist
+from meta_learn.models import (
+    NeuralNetworkVectorized,
+    NeuralNetwork,
+    LinearVectorized,
+    CatDist,
+    EqualWeightedMixtureDist,
+)
 from meta_learn.util import find_root_by_bounding
 import torch
 import pyro
 import numpy as np
 
-class TestNN(unittest.TestCase):
 
+class TestNN(unittest.TestCase):
     def testOutputShape(self):
         nn = NeuralNetwork(input_dim=2, output_dim=3, layer_sizes=(4, 5, 6))
         x = torch.normal(mean=torch.zeros(7, 2))
         y = nn(x)
         assert y.shape == (7, 3)
 
-class TestLinearVectorized(unittest.TestCase):
 
+class TestLinearVectorized(unittest.TestCase):
     def testOutputShape(self):
         nn = LinearVectorized(5, 4)
         x = torch.normal(mean=torch.zeros(7, 5))
@@ -28,7 +34,7 @@ class TestLinearVectorized(unittest.TestCase):
 
     def testConsistency(self):
         # linear vectorized
-        x = torch.normal(0, 1.0, size=(20,1))
+        x = torch.normal(0, 1.0, size=(20, 1))
         nn = LinearVectorized(1, 1)
 
         W = torch.tensor([[1.0], [2.0]])
@@ -48,8 +54,8 @@ class TestLinearVectorized(unittest.TestCase):
 
     def testfitting(self):
         torch.manual_seed(23)
-        x_data = torch.normal(mean=0.0, std=2., size=(50, 3))
-        W = torch.diag(torch.tensor([1., 2., 3.])).T
+        x_data = torch.normal(mean=0.0, std=2.0, size=(50, 3))
+        W = torch.diag(torch.tensor([1.0, 2.0, 3.0])).T
         b = torch.tensor([2.0, 5.0, -2.2])
         y_data = x_data.matmul(W.T) + b
 
@@ -58,20 +64,20 @@ class TestLinearVectorized(unittest.TestCase):
 
         for step in range(500):
             optim.zero_grad()
-            loss = torch.mean((nn(x_data) - y_data)**2)
+            loss = torch.mean((nn(x_data) - y_data) ** 2)
             loss.backward()
             optim.step()
             if step % 100 == 0:
-                print('step %i | loss: %.4f'%(step, loss.item()))
+                print("step %i | loss: %.4f" % (step, loss.item()))
 
         params = dict(nn.named_parameters())
-        W_norm = torch.sum((params['weight'].reshape(3,3) - W)**2)
-        b_norm = torch.sum((params['bias']- b) ** 2)
+        W_norm = torch.sum((params["weight"].reshape(3, 3) - W) ** 2)
+        b_norm = torch.sum((params["bias"] - b) ** 2)
         assert W_norm.item() <= 0.1
         assert b_norm.item() <= 0.1
 
-class TestNNVectorized(unittest.TestCase):
 
+class TestNNVectorized(unittest.TestCase):
     def testOutputShape(self):
         nn = NeuralNetworkVectorized(input_dim=4, output_dim=5, layer_sizes=(8, 12))
 
@@ -99,8 +105,12 @@ class TestNNVectorized(unittest.TestCase):
             nn.set_parameter(name, param.unsqueeze(0))
 
         # set params
-        nn.out.weight = torch.nn.Parameter(torch.cat([torch.zeros(1, 5 * 2), torch.ones(1, 5 * 2)]))
-        nn.out.bias = torch.nn.Parameter(torch.cat([torch.zeros(1, 5), torch.ones(1, 5)]))
+        nn.out.weight = torch.nn.Parameter(
+            torch.cat([torch.zeros(1, 5 * 2), torch.ones(1, 5 * 2)])
+        )
+        nn.out.bias = torch.nn.Parameter(
+            torch.cat([torch.zeros(1, 5), torch.ones(1, 5)])
+        )
 
         x = torch.ones(7, 2)
         y = nn(x)
@@ -111,8 +121,8 @@ class TestNNVectorized(unittest.TestCase):
     def testParamShapes(self):
         nn = NeuralNetworkVectorized(input_dim=2, output_dim=5, layer_sizes=(3,))
         shape_dict = nn.parameter_shapes()
-        assert shape_dict['out.bias'] == (5,)
-        assert shape_dict['fc_1.weight'] == (2*3,)
+        assert shape_dict["out.bias"] == (5,)
+        assert shape_dict["fc_1.weight"] == (2 * 3,)
 
     def test_vectorization1(self):
         nn = NeuralNetworkVectorized(input_dim=2, output_dim=5, layer_sizes=(6,))
@@ -121,7 +131,7 @@ class TestNNVectorized(unittest.TestCase):
         y1 = nn(x)
 
         params = nn.parameters_as_vector()
-        assert params.shape == (2*6 + 6 + 6*5 + 5, )
+        assert params.shape == (2 * 6 + 6 + 6 * 5 + 5,)
 
         nn.set_parameters_as_vector(params)
         y2 = nn(x)
@@ -141,16 +151,28 @@ class TestNNVectorized(unittest.TestCase):
 
         assert torch.sum(torch.abs(y1 - y2)).item() > 0.001
 
-class TestCatDist(unittest.TestCase):
 
+class TestCatDist(unittest.TestCase):
     def test_sampling1(self):
         torch.manual_seed(22)
-        dist1 = pyro.distributions.Normal(torch.ones(7), 0.01 * torch.ones(7,)).to_event(1)
-        dist2 = pyro.distributions.Normal(-1 * torch.ones(3), 0.01 * torch.ones(3, )).to_event(1)
+        dist1 = pyro.distributions.Normal(
+            torch.ones(7),
+            0.01
+            * torch.ones(
+                7,
+            ),
+        ).to_event(1)
+        dist2 = pyro.distributions.Normal(
+            -1 * torch.ones(3),
+            0.01
+            * torch.ones(
+                3,
+            ),
+        ).to_event(1)
 
         catdist = CatDist([dist1, dist2])
         sample = catdist.sample((100,))
-        assert sample.shape == (100, 7+3)
+        assert sample.shape == (100, 7 + 3)
 
         sample1_mean = sample[:, :7].mean().item()
         sample2_mean = sample[:, 7:].mean().item()
@@ -159,12 +181,24 @@ class TestCatDist(unittest.TestCase):
 
     def test_sampling2(self):
         torch.manual_seed(22)
-        dist1 = pyro.distributions.Normal(torch.ones(5), 0.01 * torch.ones(5,)).to_event(1)
-        dist2 = pyro.distributions.Normal(-1 * torch.ones(3), 0.01 * torch.ones(3, )).to_event(1)
+        dist1 = pyro.distributions.Normal(
+            torch.ones(5),
+            0.01
+            * torch.ones(
+                5,
+            ),
+        ).to_event(1)
+        dist2 = pyro.distributions.Normal(
+            -1 * torch.ones(3),
+            0.01
+            * torch.ones(
+                3,
+            ),
+        ).to_event(1)
 
         catdist = CatDist([dist1, dist2])
         sample = catdist.rsample((100,))
-        assert sample.shape == (100, 5+3)
+        assert sample.shape == (100, 5 + 3)
 
         sample1_mean = sample[:, :5].mean().item()
         sample2_mean = sample[:, 5:].mean().item()
@@ -173,8 +207,20 @@ class TestCatDist(unittest.TestCase):
 
     def test_pdf(self):
         torch.manual_seed(22)
-        dist1 = pyro.distributions.Normal(torch.ones(7), 0.01 * torch.ones(7, )).to_event(1)
-        dist2 = pyro.distributions.Normal(-1 * torch.ones(3), 0.01 * torch.ones(3, )).to_event(1)
+        dist1 = pyro.distributions.Normal(
+            torch.ones(7),
+            0.01
+            * torch.ones(
+                7,
+            ),
+        ).to_event(1)
+        dist2 = pyro.distributions.Normal(
+            -1 * torch.ones(3),
+            0.01
+            * torch.ones(
+                3,
+            ),
+        ).to_event(1)
         catdist = CatDist([dist1, dist2])
 
         x1 = torch.normal(1.0, 0.01, size=(150, 10))
@@ -188,8 +234,20 @@ class TestCatDist(unittest.TestCase):
 
     def test_pdf2(self):
         torch.manual_seed(22)
-        dist1 = pyro.distributions.Normal(torch.ones(7), 0.01 * torch.ones(7, )).to_event(1)
-        dist2 = pyro.distributions.Normal(-1 * torch.ones(3), 0.01 * torch.ones(3, )).to_event(1)
+        dist1 = pyro.distributions.Normal(
+            torch.ones(7),
+            0.01
+            * torch.ones(
+                7,
+            ),
+        ).to_event(1)
+        dist2 = pyro.distributions.Normal(
+            -1 * torch.ones(3),
+            0.01
+            * torch.ones(
+                3,
+            ),
+        ).to_event(1)
         catdist1 = CatDist([dist1, dist2], reduce_event_dim=False)
         catdist2 = CatDist([dist1, dist2], reduce_event_dim=True)
 
@@ -201,12 +259,13 @@ class TestCatDist(unittest.TestCase):
         logp2 = catdist2.log_prob(x3).numpy()
         assert np.array_equal(logp1, logp2)
 
-class TestEqualWeightedMixture(unittest.TestCase):
 
+class TestEqualWeightedMixture(unittest.TestCase):
     def setUp(self):
         from pyro.distributions import Normal
-        self.mean1 = torch.normal(1., 0.1, size=(8,))
-        self.mean2 = torch.normal(-1., 0.1, size=(8,))
+
+        self.mean1 = torch.normal(1.0, 0.1, size=(8,))
+        self.mean2 = torch.normal(-1.0, 0.1, size=(8,))
 
         self.scale1 = torch.ones((8,))
         self.scale2 = 2 * torch.ones((8,))
@@ -214,12 +273,16 @@ class TestEqualWeightedMixture(unittest.TestCase):
         self.dist1 = Normal(self.mean1, self.scale1).to_event(1)
         self.dist2 = Normal(self.mean2, self.scale2).to_event(1)
 
-        self.dist3 = Normal(torch.stack([self.mean1, self.mean2], dim=0),
-                            torch.stack([self.scale1, self.scale2], dim=0)).to_event(1)
+        self.dist3 = Normal(
+            torch.stack([self.mean1, self.mean2], dim=0),
+            torch.stack([self.scale1, self.scale2], dim=0),
+        ).to_event(1)
 
         self.mean_mix = (self.mean1 + self.mean2) / 2.0
 
-        var1 = ((self.mean1 - self.mean_mix)**2 + (self.mean2 - self.mean_mix)**2) / 2.0
+        var1 = (
+            (self.mean1 - self.mean_mix) ** 2 + (self.mean2 - self.mean_mix) ** 2
+        ) / 2.0
         var2 = (self.scale1**2 + self.scale2**2) / 2.0
         self.var_mix = var1 + var2
 
@@ -240,24 +303,19 @@ class TestEqualWeightedMixture(unittest.TestCase):
         p2 = mixture2.log_prob(value).item()
         assert np.array_equal(p1, p2)
 
+
 class TestRootFinding(unittest.TestCase):
-
     def test_finding_quantiles(self):
-
         size = 100
-        loc = torch.normal(0., 1., size=(size,))
-        scale = torch.normal(0., 1., size=(size,)).exp()
+        loc = torch.normal(0.0, 1.0, size=(size,))
+        scale = torch.normal(0.0, 1.0, size=(size,)).exp()
 
         def cdf_fun(x):
             return torch.distributions.Normal(loc=loc, scale=scale).cdf(x)
 
         for c in [0.1, 0.9, 0.95]:
-
-            l = - 1e8 * torch.ones(size)
-            r = + 1e8 * torch.ones(size)
+            l = -1e8 * torch.ones(size)
+            r = +1e8 * torch.ones(size)
 
             root = find_root_by_bounding(lambda x: cdf_fun(x) - c, l, r)
             assert torch.sum(torch.abs(cdf_fun(root) - c)).item() < 1e-4
-
-
-

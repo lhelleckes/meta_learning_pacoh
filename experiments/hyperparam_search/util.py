@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 import os
 
-def select_best_configs(analysis, metric, mode='max', N=5):
+
+def select_best_configs(analysis, metric, mode="max", N=5):
     try:
         rows = analysis._retrieve_rows(metric=metric, mode=mode)
     except:
@@ -17,7 +18,7 @@ def select_best_configs(analysis, metric, mode='max', N=5):
 
         # Read problematic results again
         for path in missing_header:
-            df = pd.read_csv(os.path.join(path, 'progress.csv'), header=None)
+            df = pd.read_csv(os.path.join(path, "progress.csv"), header=None)
             df.columns = header
             analysis.trial_dataframes[path] = df
 
@@ -30,12 +31,12 @@ def select_best_configs(analysis, metric, mode='max', N=5):
             else:
                 idx = -1
             if np.isnan(idx):
-                print('NaN value in experiment: ', path)
+                print("NaN value in experiment: ", path)
                 continue
             rows[path] = df.iloc[idx].to_dict()
 
     all_configs = analysis.get_all_configs()
-    reverse = mode == 'max'
+    reverse = mode == "max"
     best_paths = sorted(rows, key=lambda k: rows[k][metric], reverse=reverse)[:N]
     best_configs = [all_configs[path] for path in best_paths]
     return best_configs

@@ -134,7 +134,6 @@ class GPRegressionMetaLearnedSVGD(RegressionModelMetaLearned):
             n_iter = self.num_iter_fit
 
         for itr in range(1, n_iter + 1):
-
             task_dict_batch = self.rds_numpy.choice(
                 self.task_dicts, size=self.task_batch_size
             )

@@ -16,8 +16,7 @@ import ray.cloudpickle as cloudpickle
 from ray.tune import TuneError
 from ray.tune.progress_reporter import trial_progress_str
 from ray.tune.ray_trial_executor import RayTrialExecutor
-from ray.tune.result import (TIME_THIS_ITER_S, RESULT_DUPLICATE,
-                             SHOULD_CHECKPOINT)
+from ray.tune.result import TIME_THIS_ITER_S, RESULT_DUPLICATE, SHOULD_CHECKPOINT
 from ray.tune.syncer import get_cloud_syncer
 from ray.tune.trial import Checkpoint, Trial
 from ray.tune.schedulers import FIFOScheduler, TrialScheduler
@@ -40,7 +39,8 @@ def _naturalize(string):
 def _find_newest_ckpt(ckpt_dir):
     """Returns path to most recently modified checkpoint."""
     full_paths = [
-        os.path.join(ckpt_dir, fname) for fname in os.listdir(ckpt_dir)
+        os.path.join(ckpt_dir, fname)
+        for fname in os.listdir(ckpt_dir)
         if fname.startswith("experiment_state") and fname.endswith(".json")
     ]
     return max(full_paths)
@@ -59,14 +59,13 @@ class _TuneFunctionEncoder(json.JSONEncoder):
     def _to_cloudpickle(self, obj):
         return {
             "_type": "CLOUDPICKLE_FALLBACK",
-            "value": binary_to_hex(cloudpickle.dumps(obj))
+            "value": binary_to_hex(cloudpickle.dumps(obj)),
         }
 
 
 class _TuneFunctionDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
-        json.JSONDecoder.__init__(
-            self, object_hook=self.object_hook, *args, **kwargs)
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
 
     def object_hook(self, obj):
         if obj.get("_type") == "CLOUDPICKLE_FALLBACK":
@@ -102,18 +101,20 @@ class TrialRunner(object):
     CKPT_FILE_TMPL = "experiment_state-{}.json"
     VALID_RESUME_TYPES = [True, "LOCAL", "REMOTE", "PROMPT"]
 
-    def __init__(self,
-                 search_alg=None,
-                 scheduler=None,
-                 launch_web_server=False,
-                 local_checkpoint_dir=None,
-                 remote_checkpoint_dir=None,
-                 sync_to_cloud=None,
-                 resume=False,
-                 server_port=TuneServer.DEFAULT_PORT,
-                 verbose=True,
-                 checkpoint_period=10,
-                 trial_executor=None):
+    def __init__(
+        self,
+        search_alg=None,
+        scheduler=None,
+        launch_web_server=False,
+        local_checkpoint_dir=None,
+        remote_checkpoint_dir=None,
+        sync_to_cloud=None,
+        resume=False,
+        server_port=TuneServer.DEFAULT_PORT,
+        verbose=True,
+        checkpoint_period=10,
+        trial_executor=None,
+    ):
         """Initializes a new TrialRunner.
 
         Args:
@@ -140,7 +141,8 @@ class TrialRunner(object):
         # For debugging, it may be useful to halt trials after some time has
         # elapsed. TODO(ekl) consider exposing this in the API.
         self._global_time_limit = float(
-            os.environ.get("TRIALRUNNER_WALLTIME_LIMIT", float("inf")))
+            os.environ.get("TRIALRUNNER_WALLTIME_LIMIT", float("inf"))
+        )
         self._total_time = 0
         self._iteration = 0
         self._verbose = verbose
@@ -155,12 +157,14 @@ class TrialRunner(object):
         self._local_checkpoint_dir = local_checkpoint_dir
 
         if self._local_checkpoint_dir and not os.path.exists(
-                self._local_checkpoint_dir):
+            self._local_checkpoint_dir
+        ):
             os.makedirs(self._local_checkpoint_dir)
 
         self._remote_checkpoint_dir = remote_checkpoint_dir
-        self._syncer = get_cloud_syncer(local_checkpoint_dir,
-                                        remote_checkpoint_dir, sync_to_cloud)
+        self._syncer = get_cloud_syncer(
+            local_checkpoint_dir, remote_checkpoint_dir, sync_to_cloud
+        )
 
         self._resumed = False
 
@@ -170,22 +174,25 @@ class TrialRunner(object):
                 logger.info("Resuming trial.")
                 self._resumed = True
             except Exception:
-                logger.exception(
-                    "Runner restore failed. Restarting experiment.")
+                logger.exception("Runner restore failed. Restarting experiment.")
         else:
             logger.debug("Starting a new experiment.")
 
-        self._search_algo_checkpoint_file = os.path.join(self._local_checkpoint_dir, 'search_algo_checkpoint.pkl')
+        self._search_algo_checkpoint_file = os.path.join(
+            self._local_checkpoint_dir, "search_algo_checkpoint.pkl"
+        )
         self._start_time = time.time()
         self._last_checkpoint_time = -float("inf")
         self._checkpoint_period = checkpoint_period
-        self._session_str = datetime.fromtimestamp(
-            self._start_time).strftime("%Y-%m-%d_%H-%M-%S")
+        self._session_str = datetime.fromtimestamp(self._start_time).strftime(
+            "%Y-%m-%d_%H-%M-%S"
+        )
         self.checkpoint_file = None
         if self._local_checkpoint_dir:
             self.checkpoint_file = os.path.join(
                 self._local_checkpoint_dir,
-                TrialRunner.CKPT_FILE_TMPL.format(self._session_str))
+                TrialRunner.CKPT_FILE_TMPL.format(self._session_str),
+            )
 
     @property
     def scheduler_alg(self):
@@ -199,35 +206,40 @@ class TrialRunner(object):
         """
         if not resume_type:
             return False
-        assert resume_type in self.VALID_RESUME_TYPES, (
-            "resume_type {} is not one of {}".format(resume_type,
-                                                     self.VALID_RESUME_TYPES))
+        assert (
+            resume_type in self.VALID_RESUME_TYPES
+        ), "resume_type {} is not one of {}".format(
+            resume_type, self.VALID_RESUME_TYPES
+        )
         # Not clear if we need this assertion, since we should always have a
         # local checkpoint dir.
         assert self._local_checkpoint_dir or self._remote_checkpoint_dir
         if resume_type in [True, "LOCAL", "PROMPT"]:
             if not self.checkpoint_exists(self._local_checkpoint_dir):
-                raise ValueError("Called resume when no checkpoint exists "
-                                 "in local directory.")
+                raise ValueError(
+                    "Called resume when no checkpoint exists " "in local directory."
+                )
             elif resume_type == "PROMPT":
                 if click.confirm("Resume from local directory?"):
                     return True
 
         if resume_type in ["REMOTE", "PROMPT"]:
             if resume_type == "PROMPT" and not click.confirm(
-                    "Try downloading from remote directory?"):
+                "Try downloading from remote directory?"
+            ):
                 return False
             if not self._remote_checkpoint_dir:
-                raise ValueError(
-                    "Called resume from remote without remote directory.")
+                raise ValueError("Called resume from remote without remote directory.")
 
             # Try syncing down the upload directory.
             logger.info("Downloading from %s", self._remote_checkpoint_dir)
             self._syncer.sync_down_if_needed()
 
             if not self.checkpoint_exists(self._local_checkpoint_dir):
-                raise ValueError("Called resume when no checkpoint exists "
-                                 "in remote or local directory.")
+                raise ValueError(
+                    "Called resume when no checkpoint exists "
+                    "in remote or local directory."
+                )
         return True
 
     @classmethod
@@ -236,7 +248,8 @@ class TrialRunner(object):
             return False
         return any(
             (fname.startswith("experiment_state") and fname.endswith(".json"))
-            for fname in os.listdir(directory))
+            for fname in os.listdir(directory)
+        )
 
     def add_experiment(self, experiment):
         if not self._resumed:
@@ -256,21 +269,18 @@ class TrialRunner(object):
         if not self._local_checkpoint_dir:
             return
         now = time.time()
-        if now - self._last_checkpoint_time < self._checkpoint_period and (
-                not force):
+        if now - self._last_checkpoint_time < self._checkpoint_period and (not force):
             return
         self._last_checkpoint_time = now
         runner_state = {
-            "checkpoints": list(
-                self.trial_executor.get_checkpoints().values()),
+            "checkpoints": list(self.trial_executor.get_checkpoints().values()),
             "runner_data": self.__getstate__(),
             "stats": {
                 "start_time": self._start_time,
-                "timestamp": self._last_checkpoint_time
-            }
+                "timestamp": self._last_checkpoint_time,
+            },
         }
-        tmp_file_name = os.path.join(self._local_checkpoint_dir,
-                                     ".tmp_checkpoint")
+        tmp_file_name = os.path.join(self._local_checkpoint_dir, ".tmp_checkpoint")
         with open(tmp_file_name, "w") as f:
             json.dump(runner_state, f, indent=2, cls=_TuneFunctionEncoder)
 
@@ -297,12 +307,18 @@ class TrialRunner(object):
             runner_state = json.load(f, cls=_TuneFunctionDecoder)
             self.checkpoint_file = newest_ckpt_path
 
-        logger.warning("".join([
-            "Attempting to resume experiment from {}. ".format(
-                self._local_checkpoint_dir), "This feature is experimental, "
-            "and may not work with all search algorithms. ",
-            "This will ignore any new changes to the specification."
-        ]))
+        logger.warning(
+            "".join(
+                [
+                    "Attempting to resume experiment from {}. ".format(
+                        self._local_checkpoint_dir
+                    ),
+                    "This feature is experimental, "
+                    "and may not work with all search algorithms. ",
+                    "This will ignore any new changes to the specification.",
+                ]
+            )
+        )
 
         self.__setstate__(runner_state["runner_data"])
 
@@ -313,8 +329,7 @@ class TrialRunner(object):
             trials += [new_trial]
 
         self._n_existing_trials = len(trials)
-        for trial in sorted(
-                trials, key=lambda t: t.last_update_time, reverse=True):
+        for trial in sorted(trials, key=lambda t: t.last_update_time, reverse=True):
             self.add_trial(trial)
 
         self._search_alg.restore(self._search_algo_checkpoint_file)
@@ -323,8 +338,11 @@ class TrialRunner(object):
         """Returns whether all trials have finished running."""
 
         if self._total_time > self._global_time_limit:
-            logger.warning("Exceeded global time limit {} / {}".format(
-                self._total_time, self._global_time_limit))
+            logger.warning(
+                "Exceeded global time limit {} / {}".format(
+                    self._total_time, self._global_time_limit
+                )
+            )
             return True
 
         trials_done = all(trial.is_finished() for trial in self._trials)
@@ -421,7 +439,8 @@ class TrialRunner(object):
         if failed_trial:
             error_msg = (
                 "{} (IP: {}) detected as stale. This is likely because the "
-                "node was lost").format(failed_trial, failed_trial.node_ip)
+                "node was lost"
+            ).format(failed_trial, failed_trial.node_ip)
             logger.info(error_msg)
             with warn_if_slow("process_failed_trial"):
                 self._process_trial_failure(failed_trial, error_msg=error_msg)
@@ -449,33 +468,33 @@ class TrialRunner(object):
             if trial.should_stop(flat_result):
                 # Hook into scheduler
                 self._scheduler_alg.on_trial_complete(self, trial, flat_result)
-                self._search_alg.on_trial_complete(
-                    trial.trial_id, result=flat_result)
+                self._search_alg.on_trial_complete(trial.trial_id, result=flat_result)
                 decision = TrialScheduler.STOP
             else:
                 with warn_if_slow("scheduler.on_trial_result"):
                     decision = self._scheduler_alg.on_trial_result(
-                        self, trial, flat_result)
+                        self, trial, flat_result
+                    )
                 with warn_if_slow("search_alg.on_trial_result"):
-                    self._search_alg.on_trial_result(trial.trial_id,
-                                                     flat_result)
+                    self._search_alg.on_trial_result(trial.trial_id, flat_result)
                 if decision == TrialScheduler.STOP:
                     with warn_if_slow("search_alg.on_trial_complete"):
                         self._search_alg.on_trial_complete(
-                            trial.trial_id,
-                            result=flat_result,
-                            early_terminated=True)
+                            trial.trial_id, result=flat_result, early_terminated=True
+                        )
 
             if not is_duplicate:
                 trial.update_last_result(
-                    result, terminate=(decision == TrialScheduler.STOP))
+                    result, terminate=(decision == TrialScheduler.STOP)
+                )
 
             # Checkpoints to disk. This should be checked even if
             # the scheduler decision is STOP or PAUSE. Note that
             # PAUSE only checkpoints to memory and does not update
             # the global checkpoint state.
             self._checkpoint_trial_if_needed(
-                trial, force=result.get(SHOULD_CHECKPOINT, False))
+                trial, force=result.get(SHOULD_CHECKPOINT, False)
+            )
 
             if decision == TrialScheduler.CONTINUE:
                 self.trial_executor.continue_training(trial)
@@ -485,8 +504,7 @@ class TrialRunner(object):
                 self.trial_executor.export_trial_if_needed(trial)
                 self.trial_executor.stop_trial(trial)
             else:
-                assert False, "Invalid scheduling decision: {}".format(
-                    decision)
+                assert False, "Invalid scheduling decision: {}".format(decision)
         except Exception:
             logger.exception("Error processing event.")
             self._process_trial_failure(trial, traceback.format_exc())
@@ -506,8 +524,7 @@ class TrialRunner(object):
             else:
                 self._scheduler_alg.on_trial_error(self, trial)
                 self._search_alg.on_trial_complete(trial.trial_id, error=True)
-                self.trial_executor.stop_trial(
-                    trial, error=True, error_msg=error_msg)
+                self.trial_executor.stop_trial(trial, error=True, error_msg=error_msg)
 
     def _checkpoint_trial_if_needed(self, trial, force=False):
         """Checkpoints trial based off trial.last_result."""
@@ -531,20 +548,22 @@ class TrialRunner(object):
                 trial,
                 error=error_msg is not None,
                 error_msg=error_msg,
-                stop_logger=False)
+                stop_logger=False,
+            )
             trial.result_logger.flush()
             if self.trial_executor.has_resources(trial.resources):
                 logger.info(
                     "Trial %s: Attempting to recover "
-                    "trial state from last checkpoint.", trial)
+                    "trial state from last checkpoint.",
+                    trial,
+                )
                 self.trial_executor.start_trial(trial)
                 if trial.status == Trial.ERROR:
                     logger.error("Trial %s: Did not start correctly.", trial)
                     raise RuntimeError("Trial did not start correctly.")
                 logger.debug("Trial %s: Started correctly.", trial)
             else:
-                logger.debug("Trial %s: Notifying Scheduler and requeueing.",
-                             trial)
+                logger.debug("Trial %s: Notifying Scheduler and requeueing.", trial)
                 self._requeue_trial(trial)
         except Exception:
             logger.exception("Error recovering trial from checkpoint, abort.")
@@ -589,8 +608,9 @@ class TrialRunner(object):
             # Checking `is_finished` instead of _search_alg.is_finished
             # is fine because blocking only occurs if all trials are
             # finished and search_algorithm is not yet finished
-            while (not trials and not self.is_finished()
-                   and time.time() - start < timeout):
+            while (
+                not trials and not self.is_finished() and time.time() - start < timeout
+            ):
                 logger.info("Blocking for next trial...")
                 trials = self._search_alg.next_trials()
                 time.sleep(1)
@@ -622,15 +642,13 @@ class TrialRunner(object):
             return
         elif trial.status in [Trial.PENDING, Trial.PAUSED]:
             self._scheduler_alg.on_trial_remove(self, trial)
-            self._search_alg.on_trial_complete(
-                trial.trial_id, early_terminated=True)
+            self._search_alg.on_trial_complete(trial.trial_id, early_terminated=True)
         elif trial.status is Trial.RUNNING:
             try:
                 result = self.trial_executor.fetch_result(trial)
                 trial.update_last_result(result, terminate=True)
                 self._scheduler_alg.on_trial_complete(self, trial, result)
-                self._search_alg.on_trial_complete(
-                    trial.trial_id, result=result)
+                self._search_alg.on_trial_complete(trial.trial_id, result=result)
             except Exception:
                 error_msg = traceback.format_exc()
                 logger.exception("Error processing event.")
@@ -648,13 +666,13 @@ class TrialRunner(object):
         """
         state = self.__dict__.copy()
         for k in [
-                "_trials",
-                "_stop_queue",
-                "_server",
-                "_search_alg",
-                "_scheduler_alg",
-                "trial_executor",
-                "_syncer",
+            "_trials",
+            "_stop_queue",
+            "_server",
+            "_search_alg",
+            "_scheduler_alg",
+            "trial_executor",
+            "_syncer",
         ]:
             del state[k]
         state["launch_web_server"] = bool(self._server)

@@ -26,6 +26,7 @@ class NeuralProcess(nn.Module):
     h_dim : int
         Dimension of hidden layer in encoder and decoder.
     """
+
     def __init__(self, x_dim, y_dim, r_dim, z_dim, h_dim):
         super(NeuralProcess, self).__init__()
         self.x_dim = x_dim
@@ -153,6 +154,7 @@ class NeuralProcessImg(nn.Module):
     h_dim : int
         Dimension of hidden layer in encoder and decoder.
     """
+
     def __init__(self, img_size, r_dim, z_dim, h_dim):
         super(NeuralProcessImg, self).__init__()
         self.img_size = img_size
@@ -161,9 +163,9 @@ class NeuralProcessImg(nn.Module):
         self.z_dim = z_dim
         self.h_dim = h_dim
 
-        self.neural_process = NeuralProcess(x_dim=2, y_dim=self.num_channels,
-                                            r_dim=r_dim, z_dim=z_dim,
-                                            h_dim=h_dim)
+        self.neural_process = NeuralProcess(
+            x_dim=2, y_dim=self.num_channels, r_dim=r_dim, z_dim=z_dim, h_dim=h_dim
+        )
 
     def forward(self, img, context_mask, target_mask):
         """
