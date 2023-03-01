@@ -3,11 +3,14 @@ from random import randint
 from third_party.neural_processes.neural_process import NeuralProcessImg
 from torch import nn
 from torch.distributions.kl import kl_divergence
-from third_party.neural_processes.utils import (context_target_split, batch_context_target_mask,
-                   img_mask_to_np_input)
+from third_party.neural_processes.utils import (
+    context_target_split,
+    batch_context_target_mask,
+    img_mask_to_np_input,
+)
 
 
-class NeuralProcessTrainer():
+class NeuralProcessTrainer:
     """
     Class to handle training of Neural Processes for functions and images.
 
@@ -31,8 +34,16 @@ class NeuralProcessTrainer():
     print_freq : int
         Frequency with which to print loss information during training.
     """
-    def __init__(self, device, neural_process, optimizer, num_context_range,
-                 num_extra_target_range, print_freq=100):
+
+    def __init__(
+        self,
+        device,
+        neural_process,
+        optimizer,
+        num_context_range,
+        num_extra_target_range,
+        print_freq=100,
+    ):
         self.device = device
         self.neural_process = neural_process
         self.optimizer = optimizer
@@ -57,7 +68,7 @@ class NeuralProcessTrainer():
             Number of epochs to train for.
         """
         for epoch in range(epochs):
-            epoch_loss = 0.
+            epoch_loss = 0.0
             for i, data in enumerate(data_loader):
                 self.optimizer.zero_grad()
 
@@ -69,26 +80,31 @@ class NeuralProcessTrainer():
                 if self.is_img:
                     img, _ = data  # data is a tuple (img, label)
                     batch_size = img.size(0)
-                    context_mask, target_mask = \
-                        batch_context_target_mask(self.neural_process.img_size,
-                                                  num_context, num_extra_target,
-                                                  batch_size)
+                    context_mask, target_mask = batch_context_target_mask(
+                        self.neural_process.img_size,
+                        num_context,
+                        num_extra_target,
+                        batch_size,
+                    )
 
                     img = img.to(self.device)
                     context_mask = context_mask.to(self.device)
                     target_mask = target_mask.to(self.device)
 
-                    p_y_pred, q_target, q_context = \
-                        self.neural_process(img, context_mask, target_mask)
+                    p_y_pred, q_target, q_context = self.neural_process(
+                        img, context_mask, target_mask
+                    )
 
                     # Calculate y_target as this will be required for loss
                     _, y_target = img_mask_to_np_input(img, target_mask)
                 else:
                     x, y = data
-                    x_context, y_context, x_target, y_target = \
-                        context_target_split(x, y, num_context, num_extra_target)
-                    p_y_pred, q_target, q_context = \
-                        self.neural_process(x_context, y_context, x_target, y_target)
+                    x_context, y_context, x_target, y_target = context_target_split(
+                        x, y, num_context, num_extra_target
+                    )
+                    p_y_pred, q_target, q_context = self.neural_process(
+                        x_context, y_context, x_target, y_target
+                    )
 
                 loss = self._loss(p_y_pred, y_target, q_target, q_context)
                 loss.backward()
@@ -101,7 +117,9 @@ class NeuralProcessTrainer():
                 if self.steps % self.print_freq == 0:
                     print("iteration {}, loss {:.3f}".format(self.steps, loss.item()))
 
-            print("Epoch: {}, Avg_loss: {}".format(epoch, epoch_loss / len(data_loader)))
+            print(
+                "Epoch: {}, Avg_loss: {}".format(epoch, epoch_loss / len(data_loader))
+            )
             self.epoch_loss_history.append(epoch_loss / len(data_loader))
 
     def _loss(self, p_y_pred, y_target, q_target, q_context):

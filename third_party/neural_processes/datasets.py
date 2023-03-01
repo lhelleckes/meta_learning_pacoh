@@ -28,8 +28,14 @@ class SineData(Dataset):
     num_points : int
         Number of points at which to evaluate f(x) for x in [-pi, pi].
     """
-    def __init__(self, amplitude_range=(-1., 1.), shift_range=(-.5, .5),
-                 num_samples=1000, num_points=100):
+
+    def __init__(
+        self,
+        amplitude_range=(-1.0, 1.0),
+        shift_range=(-0.5, 0.5),
+        num_samples=1000,
+        num_points=100,
+    ):
         self.amplitude_range = amplitude_range
         self.shift_range = shift_range
         self.num_samples = num_samples
@@ -59,7 +65,7 @@ class SineData(Dataset):
         return self.num_samples
 
 
-def mnist(batch_size=16, size=28, path_to_data='../../mnist_data'):
+def mnist(batch_size=16, size=28, path_to_data="../../mnist_data"):
     """MNIST dataloader.
 
     Parameters
@@ -72,15 +78,14 @@ def mnist(batch_size=16, size=28, path_to_data='../../mnist_data'):
     path_to_data : string
         Path to MNIST data files.
     """
-    all_transforms = transforms.Compose([
-        transforms.Resize(size),
-        transforms.ToTensor()
-    ])
+    all_transforms = transforms.Compose(
+        [transforms.Resize(size), transforms.ToTensor()]
+    )
 
-    train_data = datasets.MNIST(path_to_data, train=True, download=True,
-                                transform=all_transforms)
-    test_data = datasets.MNIST(path_to_data, train=False,
-                               transform=all_transforms)
+    train_data = datasets.MNIST(
+        path_to_data, train=True, download=True, transform=all_transforms
+    )
+    test_data = datasets.MNIST(path_to_data, train=False, transform=all_transforms)
 
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
@@ -88,8 +93,9 @@ def mnist(batch_size=16, size=28, path_to_data='../../mnist_data'):
     return train_loader, test_loader
 
 
-def celeba(batch_size=16, size=32, crop=89, path_to_data='../celeba_data',
-           shuffle=True):
+def celeba(
+    batch_size=16, size=32, crop=89, path_to_data="../celeba_data", shuffle=True
+):
     """CelebA dataloader.
 
     Parameters
@@ -105,21 +111,18 @@ def celeba(batch_size=16, size=32, crop=89, path_to_data='../celeba_data',
     path_to_data : string
         Path to CelebA data files.
     """
-    transform = transforms.Compose([
-        transforms.CenterCrop(crop),
-        transforms.Resize(size),
-        transforms.ToTensor()
-    ])
+    transform = transforms.Compose(
+        [transforms.CenterCrop(crop), transforms.Resize(size), transforms.ToTensor()]
+    )
 
-    celeba_data = CelebADataset(path_to_data,
-                                transform=transform)
-    celeba_loader = DataLoader(celeba_data, batch_size=batch_size,
-                               shuffle=shuffle)
+    celeba_data = CelebADataset(path_to_data, transform=transform)
+    celeba_loader = DataLoader(celeba_data, batch_size=batch_size, shuffle=shuffle)
     return celeba_loader
 
 
 class CelebADataset(Dataset):
     """CelebA dataset."""
+
     def __init__(self, path_to_data, subsample=1, transform=None):
         """
         Parameters
@@ -133,7 +136,7 @@ class CelebADataset(Dataset):
         transform : torchvision.transforms
             Torchvision transforms to be applied to each image.
         """
-        self.img_paths = glob.glob(path_to_data + '/*.jpg')[::subsample]
+        self.img_paths = glob.glob(path_to_data + "/*.jpg")[::subsample]
         self.transform = transform
 
     def __len__(self):

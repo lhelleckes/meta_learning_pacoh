@@ -20,6 +20,7 @@ class Encoder(nn.Module):
     r_dim : int
         Dimension of output representation r.
     """
+
     def __init__(self, x_dim, y_dim, h_dim, r_dim):
         super(Encoder, self).__init__()
 
@@ -28,11 +29,13 @@ class Encoder(nn.Module):
         self.h_dim = h_dim
         self.r_dim = r_dim
 
-        layers = [nn.Linear(x_dim + y_dim, h_dim),
-                  nn.ReLU(inplace=True),
-                  nn.Linear(h_dim, h_dim),
-                  nn.ReLU(inplace=True),
-                  nn.Linear(h_dim, r_dim)]
+        layers = [
+            nn.Linear(x_dim + y_dim, h_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(h_dim, h_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(h_dim, r_dim),
+        ]
 
         self.input_to_hidden = nn.Sequential(*layers)
 
@@ -61,6 +64,7 @@ class MuSigmaEncoder(nn.Module):
     z_dim : int
         Dimension of latent variable z.
     """
+
     def __init__(self, r_dim, z_dim):
         super(MuSigmaEncoder, self).__init__()
 
@@ -103,6 +107,7 @@ class Decoder(nn.Module):
     y_dim : int
         Dimension of y values.
     """
+
     def __init__(self, x_dim, z_dim, h_dim, y_dim):
         super(Decoder, self).__init__()
 
@@ -111,12 +116,14 @@ class Decoder(nn.Module):
         self.h_dim = h_dim
         self.y_dim = y_dim
 
-        layers = [nn.Linear(x_dim + z_dim, h_dim),
-                  nn.ReLU(inplace=True),
-                  nn.Linear(h_dim, h_dim),
-                  nn.ReLU(inplace=True),
-                  nn.Linear(h_dim, h_dim),
-                  nn.ReLU(inplace=True)]
+        layers = [
+            nn.Linear(x_dim + z_dim, h_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(h_dim, h_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(h_dim, h_dim),
+            nn.ReLU(inplace=True),
+        ]
 
         self.xz_to_hidden = nn.Sequential(*layers)
         self.hidden_to_mu = nn.Linear(h_dim, y_dim)

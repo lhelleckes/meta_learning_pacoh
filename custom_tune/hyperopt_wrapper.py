@@ -7,6 +7,7 @@ import copy
 import logging
 from functools import partial
 import pickle
+
 try:
     hyperopt_logger = logging.getLogger("hyperopt")
     hyperopt_logger.setLevel(logging.WARNING)
@@ -26,7 +27,6 @@ from ray.tune.config_parser import create_trial_from_spec
 from ray.tune.suggest.variant_generator import format_vars, resolve_nested_dict
 
 logger = logging.getLogger(__name__)
-
 
 
 class HyperOptSearch(SuggestionAlgorithm):
@@ -81,19 +81,22 @@ class HyperOptSearch(SuggestionAlgorithm):
         >>>     points_to_evaluate=current_best_params)
     """
 
-    def __init__(self,
-                 space,
-                 max_concurrent=10,
-                 reward_attr=None,
-                 metric="episode_reward_mean",
-                 mode="max",
-                 points_to_evaluate=None,
-                 n_initial_points=20,
-                 random_state_seed=None,
-                 gamma=0.25,
-                 **kwargs):
+    def __init__(
+        self,
+        space,
+        max_concurrent=10,
+        reward_attr=None,
+        metric="episode_reward_mean",
+        mode="max",
+        points_to_evaluate=None,
+        n_initial_points=20,
+        random_state_seed=None,
+        gamma=0.25,
+        **kwargs
+    ):
         assert hpo is not None, "HyperOpt must be installed!"
         from hyperopt.fmin import generate_trials_to_calculate
+
         assert type(max_concurrent) is int and max_concurrent > 0
         assert mode in ["min", "max"], "`mode` must be 'min' or 'max'!"
 
@@ -103,20 +106,20 @@ class HyperOptSearch(SuggestionAlgorithm):
             logger.warning(
                 "`reward_attr` is deprecated and will be removed in a future "
                 "version of Tune. "
-                "Setting `metric={}` and `mode=max`.".format(reward_attr))
+                "Setting `metric={}` and `mode=max`.".format(reward_attr)
+            )
 
         self._max_concurrent = max_concurrent
         self._metric = metric
         # hyperopt internally minimizes, so "max" => -1
         if mode == "max":
-            self._metric_op = -1.
+            self._metric_op = -1.0
         elif mode == "min":
-            self._metric_op = 1.
+            self._metric_op = 1.0
         if n_initial_points is None:
             self.algo = hpo.tpe.suggest
         else:
-            self.algo = partial(
-                hpo.tpe.suggest, n_startup_jobs=n_initial_points)
+            self.algo = partial(hpo.tpe.suggest, n_startup_jobs=n_initial_points)
         if gamma is not None:
             self.algo = partial(self.algo, gamma=gamma)
         self.domain = hpo.Domain(lambda spc: spc, space)
@@ -125,8 +128,7 @@ class HyperOptSearch(SuggestionAlgorithm):
             self._points_to_evaluate = 0
         else:
             assert type(points_to_evaluate) == list
-            self._hpopt_trials = generate_trials_to_calculate(
-                points_to_evaluate)
+            self._hpopt_trials = generate_trials_to_calculate(points_to_evaluate)
             self._hpopt_trials.refresh()
             self._points_to_evaluate = len(points_to_evaluate)
         self._live_trial_mapping = {}
@@ -149,8 +151,12 @@ class HyperOptSearch(SuggestionAlgorithm):
             self._hpopt_trials.refresh()
 
             # Get new suggestion from Hyperopt
-            new_trials = self.algo(new_ids, self.domain, self._hpopt_trials,
-                                   self.rstate.randint(2**31 - 1))
+            new_trials = self.algo(
+                new_ids,
+                self.domain,
+                self._hpopt_trials,
+                self.rstate.randint(2**31 - 1),
+            )
             self._hpopt_trials.insert_trial_docs(new_trials)
             self._hpopt_trials.refresh()
             new_trial = new_trials[0]
@@ -160,13 +166,15 @@ class HyperOptSearch(SuggestionAlgorithm):
         config = hpo.base.spec_from_misc(new_trial["misc"])
         ctrl = hpo.base.Ctrl(self._hpopt_trials, current_trial=new_trial)
         memo = self.domain.memo_from_config(config)
-        hpo.utils.use_obj_for_literal_in_memo(self.domain.expr, ctrl,
-                                              hpo.base.Ctrl, memo)
+        hpo.utils.use_obj_for_literal_in_memo(
+            self.domain.expr, ctrl, hpo.base.Ctrl, memo
+        )
 
         suggested_config = hpo.pyll.rec_eval(
             self.domain.expr,
             memo=memo,
-            print_node_on_error=self.domain.rec_eval_print_node_on_error)
+            print_node_on_error=self.domain.rec_eval_print_node_on_error,
+        )
         return copy.deepcopy(suggested_config)
 
     def on_trial_result(self, trial_id, result):
@@ -177,11 +185,9 @@ class HyperOptSearch(SuggestionAlgorithm):
         ho_trial["book_time"] = now
         ho_trial["refresh_time"] = now
 
-    def on_trial_complete(self,
-                          trial_id,
-                          result=None,
-                          error=False,
-                          early_terminated=False):
+    def on_trial_complete(
+        self, trial_id, result=None, error=False, early_terminated=False
+    ):
         """Notification for the completion of trial.
 
         The result is internally negated when interacting with HyperOpt
@@ -220,9 +226,7 @@ class HyperOptSearch(SuggestionAlgorithm):
         if trial_id not in self._live_trial_mapping:
             return
         hyperopt_tid = self._live_trial_mapping[trial_id][0]
-        return [
-            t for t in self._hpopt_trials.trials if t["tid"] == hyperopt_tid
-        ][0]
+        return [t for t in self._hpopt_trials.trials if t["tid"] == hyperopt_tid][0]
 
     def _num_live_trials(self):
         return len(self._live_trial_mapping)
@@ -246,19 +250,20 @@ class HyperOptSearch(SuggestionAlgorithm):
                 else:
                     break
             spec = copy.deepcopy(experiment_spec)
-            spec["config"] = merge_dicts(spec["config"],
-                                         copy.deepcopy(suggested_config))
+            spec["config"] = merge_dicts(
+                spec["config"], copy.deepcopy(suggested_config)
+            )
             flattened_config = resolve_nested_dict(spec["config"])
             self._counter += 1
-            tag = "{0}_{1}".format(
-                str(self._counter), format_vars(flattened_config))
+            tag = "{0}_{1}".format(str(self._counter), format_vars(flattened_config))
             yield create_trial_from_spec(
                 spec,
                 output_path,
                 self._parser,
                 evaluated_params=flatten_dict(suggested_config),
                 experiment_tag=tag,
-                trial_id=trial_id)
+                trial_id=trial_id,
+            )
 
     def save(self, checkpoint_dir):
         trials_object = (self._hpopt_trials, self.rstate.get_state(), self._counter)
